@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyBusiness Chatbot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+            overflow: hidden;
+        }
+        .chat-header {
+            background: #2563eb;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        .chat-box {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 15px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        .user-msg {
+            background: #2563eb;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        .bot-msg {
+            background: #e5e7eb;
+            color: #1f2937;
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+        .input-area {
+            display: flex;
+            padding: 15px;
+            background: #fff;
+            border-top: 1px solid #e5e7eb;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            outline: none;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-left: 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">MyBusiness Support</div>
+    <div class="chat-box" id="chat-box">
+        <div class="message bot-msg">Hello! How can I help you with our web development or marketing services today?</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="user-input" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+    let conversationHistory = [];
+
+    async function sendMessage() {
+        const inputField = document.getElementById('user-input');
+        const messageText = inputField.value.trim();
+        if (!messageText) return;
+
+        addMessageToUI(messageText, 'user-msg');
+        inputField.value = '';
+
+        // FIXED: Using .push() for JavaScript arrays
+        conversationHistory.push({"role": "user", "content": messageText});
+
+        try {
+            const chatBox = document.getElementById('chat-box');
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'message bot-msg';
+            typingIndicator.id = 'typing';
+            typingIndicator.innerText = 'Typing...';
+            chatBox.appendChild(typingIndicator);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: conversationHistory })
+            });
+
+            const data = await response.json();
+            document.getElementById('typing').remove();
+
+            if(data.reply) {
+                addMessageToUI(data.reply, 'bot-msg');
+                // FIXED: Using .push() here too
+                conversationHistory.push({"role": "assistant", "content": data.reply});
+            } else {
+                addMessageToUI("Error: Could not get a response.", 'bot-msg');
+            }
+            
+        } catch (error) {
+            document.getElementById('typing').remove();
+            addMessageToUI("Server error. Please try again later.", 'bot-msg');
+        }
+    }
+
+    function addMessageToUI(text, className) {
+        const chatBox = document.getElementById('chat-box');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${className}`;
+        msgDiv.innerText = text;
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    }
+</script>
+
+</body>
+</html>
